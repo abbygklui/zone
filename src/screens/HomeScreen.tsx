@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -12,12 +12,10 @@ import Animated, {
 import { Timer, CaretLeft, CaretRight } from 'phosphor-react-native';
 import { GradientBackground } from '../components/ambient/GradientBackground';
 import { NoisePlayer } from '../components/noise/NoisePlayer';
-import { Slider } from '../components/ui/Slider';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { CountdownTimer } from '../components/timer/CountdownTimer';
 import { useAudioStore } from '../store/useAudioStore';
 import { useTimerStore } from '../store/useTimerStore';
-import { useSceneStore } from '../store/useSceneStore';
 import { useGradientAnimation } from '../hooks/useGradientAnimation';
 import { useAmbientColor } from '../hooks/useAmbientColor';
 import { useHaptics } from '../hooks/useHaptics';
@@ -27,8 +25,6 @@ import { spacing } from '../constants/layout';
 import { formatTime } from '../utils/time';
 import { NOISE_PRESETS } from '../constants/presets';
 
-const { width: W } = Dimensions.get('window');
-
 const NOISE_TYPES: NoiseType[] = ['white', 'pink', 'brown'];
 
 const NOISE_META: Record<NoiseType, { label: string; subtitle: string }> = {
@@ -37,18 +33,16 @@ const NOISE_META: Record<NoiseType, { label: string; subtitle: string }> = {
   brown: { label: 'Brown Noise', subtitle: 'Deep · Immersive' },
 };
 
-export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const haptics = useHaptics();
   const [timerSheetVisible, setTimerSheetVisible] = useState(false);
 
   const {
     isPlaying,
-    masterVolume,
     activeNoiseType,
     setPlaying,
     setVolumes,
-    setMasterVolume,
     setNoiseType,
     setPreset,
     setAmbientLayer,
@@ -206,25 +200,8 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             ))}
           </View>
 
-          {/* Volume */}
-          <View style={[styles.bottomContent, { paddingBottom: insets.bottom + spacing.xl }]}>
-            <View style={styles.sliderContainer}>
-              <Slider
-                value={masterVolume}
-                onValueChange={setMasterVolume}
-                accentColor={noiseColors.primary}
-                onSlideStart={haptics.sliderMove}
-              />
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Scenes')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.scenesLink, { color: noiseColors.primary + 'AA' }]}>
-                Scenes →
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Bottom spacer for tab bar */}
+          <View style={{ paddingBottom: insets.bottom + spacing.xl }} />
         </View>
 
         <BottomSheet
@@ -332,19 +309,6 @@ const styles = StyleSheet.create({
   dot: {
     height: 6,
     borderRadius: 3,
-  },
-  bottomContent: {
-    alignItems: 'center',
-    paddingHorizontal: spacing['2xl'],
-    gap: spacing.lg,
-  },
-  sliderContainer: {
-    width: '100%',
-  },
-  scenesLink: {
-    fontFamily: fonts.sourceSans.regular,
-    fontSize: 14,
-    letterSpacing: 0.2,
   },
   timerSheetContent: {
     flex: 1,
