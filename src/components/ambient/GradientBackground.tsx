@@ -1,129 +1,205 @@
-import React from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Dimensions, View } from 'react-native';
 import Animated, {
+  useSharedValue,
   useAnimatedStyle,
-  interpolate,
+  withRepeat,
+  withSequence,
+  withTiming,
+  cancelAnimation,
+  Easing,
   SharedValue,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../constants/colors';
+import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
+import { colors, NoiseType } from '../../constants/colors';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: W, height: H } = Dimensions.get('window');
 
-interface GradientBackgroundProps {
-  gradientColors: [string, string, string];
-  pulseProgress: SharedValue<number>;
-  bloomScale: SharedValue<number>;
+interface BlobDef {
+  color: string;
+  opacity: number;
+  diameter: number;
+  cx: number;   // screen X of gradient center
+  cy: number;   // screen Y of gradient center
+  driftDuration: number;
+  driftX: number;
+  driftY: number;
+}
+
+// Blob configs per noise type — positions tuned to look great on iPhone
+const BLOB_CONFIGS: Record<NoiseType, BlobDef[]> = {
+  white: [
+    {
+      color: '#8CC8FF', opacity: 0.38, diameter: 1400,
+      cx: W * 0.1, cy: H * 0.08,
+      driftDuration: 14000, driftX: 50, driftY: 40,
+    },
+    {
+      color: '#C8A0FF', opacity: 0.30, diameter: 1000,
+      cx: W * 0.88, cy: H * 0.15,
+      driftDuration: 19000, driftX: -40, driftY: 30,
+    },
+    {
+      color: '#B4FFD8', opacity: 0.25, diameter: 1200,
+      cx: W * 0.5, cy: H * 0.88,
+      driftDuration: 22000, driftX: 30, driftY: -35,
+    },
+  ],
+  pink: [
+    {
+      color: '#FF3C82', opacity: 0.45, diameter: 1300,
+      cx: W * 0.5, cy: H * 0.08,
+      driftDuration: 16000, driftX: 40, driftY: 50,
+    },
+    {
+      color: '#B41464', opacity: 0.38, diameter: 1000,
+      cx: W * 0.1, cy: H * 0.82,
+      driftDuration: 21000, driftX: -35, driftY: -30,
+    },
+    {
+      color: '#FF78B4', opacity: 0.28, diameter: 800,
+      cx: W * 0.9, cy: H * 0.5,
+      driftDuration: 17000, driftX: -45, driftY: 35,
+    },
+  ],
+  brown: [
+    {
+      color: '#FF6414', opacity: 0.50, diameter: 1400,
+      cx: W * 0.1, cy: H * 0.82,
+      driftDuration: 15000, driftX: 55, driftY: -40,
+    },
+    {
+      color: '#C83C00', opacity: 0.38, diameter: 1100,
+      cx: W * 0.88, cy: H * 0.15,
+      driftDuration: 20000, driftX: -45, driftY: 50,
+    },
+    {
+      color: '#FFB432', opacity: 0.28, diameter: 800,
+      cx: W * 0.5, cy: H * 0.9,
+      driftDuration: 24000, driftX: 35, driftY: -30,
+    },
+  ],
+};
+
+interface GradientBlobProps {
+  blobId: string;
+  config: BlobDef;
+  isActive: boolean;
   bloomOpacity: SharedValue<number>;
 }
 
-export const GradientBackground: React.FC<GradientBackgroundProps> = ({
-  gradientColors,
-  pulseProgress,
-  bloomScale,
+const GradientBlob: React.FC<GradientBlobProps> = ({
+  blobId,
+  config,
+  isActive,
   bloomOpacity,
 }) => {
-  const blob1Style = useAnimatedStyle(() => {
-    const translateX = interpolate(pulseProgress.value, [0, 1], [-30, 30]);
-    const translateY = interpolate(pulseProgress.value, [0, 1], [-20, 20]);
-    return {
-      transform: [
-        { scale: bloomScale.value },
-        { translateX },
-        { translateY },
-      ],
-      opacity: bloomOpacity.value * 0.6,
-    };
-  });
+  const { color, opacity, diameter, cx, cy, driftDuration, driftX, driftY } = config;
+  const r = diameter / 2;
 
-  const blob2Style = useAnimatedStyle(() => {
-    const translateX = interpolate(pulseProgress.value, [0, 1], [20, -20]);
-    const translateY = interpolate(pulseProgress.value, [0, 1], [15, -25]);
-    return {
-      transform: [
-        { scale: bloomScale.value },
-        { translateX },
-        { translateY },
-      ],
-      opacity: bloomOpacity.value * 0.4,
-    };
-  });
+  const noiseOpacity = useSharedValue(isActive ? 1 : 0);
+  const driftXVal = useSharedValue(0);
+  const driftYVal = useSharedValue(0);
 
-  const blob3Style = useAnimatedStyle(() => {
-    const translateX = interpolate(pulseProgress.value, [0, 1], [-15, 25]);
-    const translateY = interpolate(pulseProgress.value, [0, 1], [25, -15]);
-    return {
-      transform: [
-        { scale: bloomScale.value * 0.9 },
-        { translateX },
-        { translateY },
-      ],
-      opacity: bloomOpacity.value * 0.3,
-    };
-  });
+  useEffect(() => {
+    noiseOpacity.value = withTiming(isActive ? 1 : 0, { duration: 650 });
+
+    if (isActive) {
+      driftXVal.value = withRepeat(
+        withSequence(
+          withTiming(driftX, { duration: driftDuration, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-driftX, { duration: driftDuration, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        false
+      );
+      driftYVal.value = withRepeat(
+        withSequence(
+          withTiming(driftY, { duration: Math.round(driftDuration * 0.83), easing: Easing.inOut(Easing.ease) }),
+          withTiming(-driftY, { duration: Math.round(driftDuration * 0.83), easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        false
+      );
+    } else {
+      cancelAnimation(driftXVal);
+      cancelAnimation(driftYVal);
+      driftXVal.value = withTiming(0, { duration: 800 });
+      driftYVal.value = withTiming(0, { duration: 800 });
+    }
+  }, [isActive, noiseOpacity, driftXVal, driftYVal, driftDuration, driftX, driftY]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: noiseOpacity.value * bloomOpacity.value,
+    transform: [
+      { translateX: driftXVal.value },
+      { translateY: driftYVal.value },
+    ],
+  }));
+
+  const gradId = `grad-${blobId}`;
 
   return (
-    <Animated.View style={styles.container}>
-      <LinearGradient
-        colors={[colors.background, colors.background]}
-        style={StyleSheet.absoluteFill}
-      />
-      <Animated.View style={[styles.blob, styles.blob1, blob1Style]}>
-        <LinearGradient
-          colors={[gradientColors[0], 'transparent']}
-          style={styles.blobGradient}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </Animated.View>
-      <Animated.View style={[styles.blob, styles.blob2, blob2Style]}>
-        <LinearGradient
-          colors={[gradientColors[1], 'transparent']}
-          style={styles.blobGradient}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-        />
-      </Animated.View>
-      <Animated.View style={[styles.blob, styles.blob3, blob3Style]}>
-        <LinearGradient
-          colors={[gradientColors[2], 'transparent']}
-          style={styles.blobGradient}
-          start={{ x: 0.5, y: 1 }}
-          end={{ x: 0.5, y: 0 }}
-        />
-      </Animated.View>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.blob,
+        {
+          width: diameter,
+          height: diameter,
+          left: cx - r,
+          top: cy - r,
+        },
+        animStyle,
+      ]}
+    >
+      <Svg width={diameter} height={diameter}>
+        <Defs>
+          <RadialGradient id={gradId} cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={color} stopOpacity={opacity} />
+            <Stop offset="55%" stopColor={color} stopOpacity={opacity * 0.42} />
+            <Stop offset="100%" stopColor={color} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={r} cy={r} r={r} fill={`url(#${gradId})`} />
+      </Svg>
     </Animated.View>
   );
 };
 
-const BLOB_SIZE = SCREEN_WIDTH * 1.2;
+interface GradientBackgroundProps {
+  noiseType: NoiseType;
+  bloomOpacity: SharedValue<number>;
+}
+
+export const GradientBackground: React.FC<GradientBackgroundProps> = ({
+  noiseType,
+  bloomOpacity,
+}) => {
+  return (
+    <View style={styles.container} pointerEvents="none">
+      {(Object.keys(BLOB_CONFIGS) as NoiseType[]).map((type) =>
+        BLOB_CONFIGS[type].map((config, i) => (
+          <GradientBlob
+            key={`${type}-${i}`}
+            blobId={`${type}-${i}`}
+            config={config}
+            isActive={type === noiseType}
+            bloomOpacity={bloomOpacity}
+          />
+        ))
+      )}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
     overflow: 'hidden',
   },
   blob: {
     position: 'absolute',
-    width: BLOB_SIZE,
-    height: BLOB_SIZE,
-    borderRadius: BLOB_SIZE / 2,
-    overflow: 'hidden',
-  },
-  blobGradient: {
-    width: '100%',
-    height: '100%',
-  },
-  blob1: {
-    top: -BLOB_SIZE * 0.3,
-    left: -BLOB_SIZE * 0.2,
-  },
-  blob2: {
-    top: SCREEN_HEIGHT * 0.2,
-    right: -BLOB_SIZE * 0.4,
-  },
-  blob3: {
-    bottom: -BLOB_SIZE * 0.2,
-    left: -BLOB_SIZE * 0.1,
   },
 });

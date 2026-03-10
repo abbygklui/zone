@@ -15,7 +15,7 @@ Zone is a React Native iOS application for study-focused ambient noise. It gener
 | Navigation | React Navigation v6 (bottom tabs) |
 | Audio Engine | `react-native-track-player` |
 | Background Audio | `react-native-track-player` (AVAudioSession, iOS `playback` category) |
-| Animations | React Native Reanimated v3 + `expo-linear-gradient` |
+| Animations | React Native Reanimated v4 + `expo-linear-gradient` + `react-native-svg` |
 | State | Zustand |
 | Storage | `@react-native-async-storage/async-storage` |
 | Fonts | `expo-font` — Fraunces, Source Sans 3 |
@@ -49,9 +49,9 @@ zone/
 ├── src/
 │   ├── components/
 │   │   ├── noise/
-│   │   │   ├── NoiseCard.tsx           # Single noise type selector card
+│   │   │   ├── NoiseCard.tsx           # Noise type chip (used in Customize/Scenes)
 │   │   │   ├── NoiseMixer.tsx          # Blend sliders for custom mix
-│   │   │   ├── NoisePlayer.tsx         # Main play/pause/volume control
+│   │   │   ├── NoisePlayer.tsx         # Glowing SVG orb — play/pause button + radial gradient sphere
 │   │   │   └── WaveformVisual.tsx      # Animated visualizer orb
 │   │   ├── ambient/
 │   │   │   ├── GradientBackground.tsx  # Full-screen animated gradient
@@ -167,15 +167,27 @@ RootNavigator
 
 ## Gradient Animation System
 
-Each noise type maps to a distinct gradient palette:
+### Background (`GradientBackground`)
+6 animated blobs, each a different color from the active noise type's palette:
 
-| Noise | Gradient Colors |
+| Noise | Palette |
 |---|---|
-| White | Ice blue → Silver → Near-white |
-| Pink | Rose → Warm mauve → Soft lavender |
-| Brown | Amber → Burnt orange → Deep walnut |
-| Custom | Interpolated from channel volume weights |
+| White | Pastel rainbow — yellow, sky blue, baby pink, mint, lavender, soft green |
+| Pink | Hot pink, rose, deep magenta, blush, fuchsia, medium pink |
+| Brown | Vivid orange, burnt orange-red, amber, deep red-orange, golden amber, terracotta |
 
-- Gradient blooms on play (scale + opacity ease-in)
-- Idle state: slow organic pulse at ~0.08Hz using Reanimated shared values
-- Transition between types: color-interpolated crossfade over 1500ms
+- Each blob cycles opacity using `(1 - cos(phase * 2π)) / 2` with 1/6 offset per blob
+- When playing: 6s full color cycle, bloom opacity 1.0
+- When idle: 22s slow cycle, bloom opacity 0.28
+- Blob positions spread across full screen, slow organic movement via `pulseProgress` (11s loop)
+
+### Orb (`NoisePlayer`)
+Layered SVG sphere with radial gradients (react-native-svg):
+1. **Outer aura** — 300px radial gradient, `orbOuter` → transparent, opacity breathes 0.32–0.88
+2. **Mid glow** — 220px radial gradient, denser inner glow
+3. **Orb body** — 170px radial gradient from `orbInner` (top-left highlight) → `orbOuter` (edge)
+4. **Specular highlight** — small white ellipse, opacity 0.3, simulates 3D sphere
+5. **Tap target** — 170px TouchableOpacity floated on top
+
+- Pulse: scale 1.0 → 1.05 (3s loop) when playing
+- Glow breathe: 0.32 → 0.88 (8s loop) when playing

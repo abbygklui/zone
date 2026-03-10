@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import TrackPlayer, {
   Capability,
   AppKilledPlaybackBehavior,
+  State,
+  usePlaybackState,
 } from 'react-native-track-player';
 import { useAudioStore } from '../store/useAudioStore';
-import { useSceneStore } from '../store/useSceneStore';
 
 let isSetup = false;
 
@@ -18,93 +19,85 @@ export const setupTrackPlayer = async () => {
       capabilities: [Capability.Play, Capability.Pause],
       compactCapabilities: [Capability.Play, Capability.Pause],
       android: {
-        appKilledPlaybackBehavior:
-          AppKilledPlaybackBehavior.ContinuePlayback,
+        appKilledPlaybackBehavior: AppKilledPlaybackBehavior.ContinuePlayback,
       },
     });
     isSetup = true;
-  } catch (e) {
-    // Player may already be initialized
+  } catch {
     isSetup = true;
   }
 };
 
-export const useAudioEngine = () => {
-  const { isPlaying, volumes, masterVolume, activeAmbientLayer, activeNoiseType } =
-    useAudioStore();
-  const { activeSceneId, presets, custom } = useSceneStore();
-  const isInitialized = useRef(false);
+const TRACKS = {
+  white: {
+    url: require('../../assets/audio/white-noise.wav'),
+    title: 'White Noise',
+    artist: 'Zone',
+  },
+  pink: {
+    url: require('../../assets/audio/pink-noise.wav'),
+    title: 'Pink Noise',
+    artist: 'Zone',
+  },
+  brown: {
+    url: require('../../assets/audio/brown-noise.wav'),
+    title: 'Brown Noise',
+    artist: 'Zone',
+  },
+};
 
+export const useAudioEngine = () => {
+  const { isPlaying, masterVolume, activeNoiseType } = useAudioStore();
+  const isInitialized = useRef(false);
+  const currentNoiseType = useRef(activeNoiseType);
+
+  // Setup player on mount
   useEffect(() => {
     const init = async () => {
       await setupTrackPlayer();
+      // Load the initial track
+      const track = TRACKS[activeNoiseType];
+      await TrackPlayer.reset();
+      await TrackPlayer.add({ ...track, isLiveStream: false });
+      await TrackPlayer.setRepeatMode(2); // RepeatMode.Track
       isInitialized.current = true;
     };
     init();
   }, []);
 
+  // Handle play/pause
   useEffect(() => {
     if (!isInitialized.current) return;
+    if (isPlaying) {
+      TrackPlayer.play();
+    } else {
+      TrackPlayer.pause();
+    }
+  }, [isPlaying]);
 
-    const updatePlayback = async () => {
-      try {
-        const scene = [...presets, ...custom].find(
-          (s) => s.id === activeSceneId
-        );
-        const sceneName = scene?.name ?? 'Zone';
+  // Handle noise type change — swap track with crossfade
+  useEffect(() => {
+    if (!isInitialized.current) return;
+    if (currentNoiseType.current === activeNoiseType) return;
+    currentNoiseType.current = activeNoiseType;
 
-        await TrackPlayer.updateNowPlayingMetadata({
-          title: sceneName,
-          artist: 'Zone',
-        });
-
-        if (isPlaying) {
-          // Add tracks based on active volumes
-          await TrackPlayer.reset();
-
-          const tracks: { url: any; title: string; artist: string }[] = [];
-
-          if (volumes.white > 0) {
-            tracks.push({
-              url: require('../../assets/audio/white-noise.mp3'),
-              title: 'White Noise',
-              artist: 'Zone',
-            });
-          }
-          if (volumes.pink > 0) {
-            tracks.push({
-              url: require('../../assets/audio/pink-noise.mp3'),
-              title: 'Pink Noise',
-              artist: 'Zone',
-            });
-          }
-          if (volumes.brown > 0) {
-            tracks.push({
-              url: require('../../assets/audio/brown-noise.mp3'),
-              title: 'Brown Noise',
-              artist: 'Zone',
-            });
-          }
-
-          if (tracks.length > 0) {
-            await TrackPlayer.add(tracks[0]);
-            await TrackPlayer.updateNowPlayingMetadata({
-              title: sceneName,
-              artist: 'Zone',
-            });
-            await TrackPlayer.setVolume(masterVolume);
-            await TrackPlayer.play();
-          }
-        } else {
-          await TrackPlayer.pause();
-        }
-      } catch (e) {
-        // Handle gracefully
+    const swap = async () => {
+      const wasPlaying = isPlaying;
+      await TrackPlayer.reset();
+      await TrackPlayer.add({ ...TRACKS[activeNoiseType], isLiveStream: false });
+      await TrackPlayer.setRepeatMode(2);
+      if (wasPlaying) {
+        await TrackPlayer.play();
       }
     };
+    swap();
+  }, [activeNoiseType, isPlaying]);
 
-    updatePlayback();
-  }, [isPlaying, volumes, masterVolume, activeAmbientLayer, activeSceneId, activeNoiseType, presets, custom]);
+  // Handle volume
+  useEffect(() => {
+    if (!isInitialized.current) return;
+    TrackPlayer.setVolume(masterVolume);
+  }, [masterVolume]);
 
   return { isInitialized: isInitialized.current };
 };

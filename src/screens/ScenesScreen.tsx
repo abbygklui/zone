@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SceneList } from '../components/ambient/SceneList';
 import { useSceneStore } from '../store/useSceneStore';
@@ -8,6 +8,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { getDominantNoiseType } from '../utils/audio';
 import { Scene } from '../constants/presets';
 import { colors } from '../constants/colors';
+import { fonts } from '../constants/fonts';
 import { spacing } from '../constants/layout';
 
 export const ScenesScreen: React.FC = () => {
@@ -46,6 +47,7 @@ export const ScenesScreen: React.FC = () => {
       style={[styles.container, { paddingTop: insets.top }]}
       contentContainerStyle={styles.contentContainer}
     >
+      <Text style={styles.title}>Scenes</Text>
       <SceneList
         title="Built-in"
         scenes={presets}
@@ -74,5 +76,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
     paddingBottom: spacing['3xl'],
+  },
+  title: {
+    fontFamily: fonts.fraunces.semiBold,
+    fontSize: 36,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
   },
 });

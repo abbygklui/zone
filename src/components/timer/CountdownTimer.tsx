@@ -13,7 +13,7 @@ export const CountdownTimer: React.FC = () => {
   const {
     remaining,
     isRunning,
-    focusDuration,
+    duration,
     startTimer,
     pauseTimer,
     resetTimer,
@@ -24,7 +24,7 @@ export const CountdownTimer: React.FC = () => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const noiseColors = getNoiseColors(activeNoiseType);
-  const totalDuration = focusDuration * 60;
+  const totalDuration = duration * 60;
 
   useEffect(() => {
     if (isRunning) {
@@ -32,9 +32,7 @@ export const CountdownTimer: React.FC = () => {
         tickTimer();
       }, 1000);
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -57,22 +55,14 @@ export const CountdownTimer: React.FC = () => {
         total={totalDuration}
         accentColor={noiseColors.primary}
       />
-      <Text style={styles.label}>Countdown</Text>
       <View style={styles.controls}>
         <TouchableOpacity onPress={resetTimer} style={styles.ghostButton}>
-          <ArrowCounterClockwise
-            size={24}
-            color={colors.textSecondary}
-            weight="thin"
-          />
+          <ArrowCounterClockwise size={24} color={colors.textSecondary} weight="thin" />
           <Text style={styles.ghostLabel}>Reset</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleToggle}
-          style={[
-            styles.mainButton,
-            { backgroundColor: noiseColors.primary },
-          ]}
+          style={[styles.mainButton, { backgroundColor: noiseColors.primary }]}
         >
           {isRunning ? (
             <Pause size={24} color={colors.background} weight="fill" />
@@ -89,12 +79,6 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingTop: spacing.xl,
-  },
-  label: {
-    fontFamily: fonts.sourceSans.medium,
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: spacing.base,
   },
   controls: {
     flexDirection: 'row',

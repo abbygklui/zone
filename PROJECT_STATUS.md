@@ -1,24 +1,24 @@
 # Zone — Project Status
 
-**Version:** 0.1.0  
-**Status:** 🟡 In Development  
-**Platform:** iOS  
+**Version:** 0.1.0
+**Status:** 🟡 In Development
+**Platform:** iOS
 **Bundle:** com.silly.zone
 
 ---
 
-## Phase 1 — Foundation ⬜ Not Started
+## Phase 1 — Foundation 🟢 Complete
 
 ### Project Setup
-- [ ] Initialize Expo bare workflow project
-- [ ] Configure `app.json` with bundle ID `com.silly.zone`
-- [ ] Set up TypeScript (`tsconfig.json`, strict mode)
-- [ ] Configure Babel (`babel.config.js`)
+- [x] Initialize Expo bare workflow project
+- [x] Configure `app.json` with bundle ID `com.silly.zone`
+- [x] Set up TypeScript (`tsconfig.json`, strict mode)
+- [x] Configure Babel (`babel.config.js`) — uses `babel-preset-expo` + `react-native-reanimated/plugin`
 - [ ] Set up ESLint + Prettier
-- [ ] Install and configure Zustand
-- [ ] Install and configure React Navigation v6
-- [ ] Load Fraunces and Source Sans 3 via `expo-font`
-- [ ] Define color tokens, spacing, and font constants
+- [x] Install and configure Zustand
+- [x] Install and configure React Navigation v6
+- [x] Load Fraunces and Source Sans 3 via `expo-font`
+- [x] Define color tokens, spacing, and font constants
 
 ### iOS Configuration
 - [ ] Configure `Info.plist` — `UIBackgroundModes: audio`
@@ -46,29 +46,36 @@
 - [ ] Implement three-channel mixing (white, pink, brown)
 - [ ] Implement master volume control
 - [ ] Implement fade-in (800ms) and fade-out (500ms) envelopes
-- [ ] Implement crossfade between noise types (1200ms)
+- [ ] Implement crossfade between noise types (500ms on swipe)
 - [ ] Implement scene layer mixing (ambient on top of noise)
-- [ ] Build `useAudioStore` with Zustand
+- [x] Build `useAudioStore` with Zustand
 
 ### Presets
-- [ ] Define 3 built-in noise presets (Pure White, Pink Focus, Brown Deep)
+- [x] Define 3 built-in noise presets (Pure White, Pink Focus, Brown Deep)
 - [ ] Define 4 built-in ambient scenes (Rain Study, Café Flow, Fireplace, Library)
 - [ ] Persist active scene/preset to AsyncStorage
 
 ---
 
-## Phase 3 — Core UI ⬜ Not Started
+## Phase 3 — Core UI 🟡 In Progress
 
 ### Home Screen
-- [ ] Full-screen animated gradient background (`GradientBackground`)
-- [ ] Gradient mapped to active noise type
-- [ ] Gradient bloom animation on play
-- [ ] Slow organic idle pulse animation
-- [ ] Central play/pause button
-- [ ] Noise type selector (White / Pink / Brown chips)
-- [ ] Master volume slider
-- [ ] Active scene label + quick-switch button
-- [ ] Timer overlay (compact, dismissible)
+- [x] Full-screen animated gradient background (`GradientBackground`)
+  - 6 animated blobs, staggered color cycling per noise type
+  - Fast cycle (6s) when playing, slow (22s) when idle
+- [x] Gradient palette mapped to active noise type (white=pastel rainbow, pink=pinks, brown=earthy)
+- [x] Gradient bloom animation on play / fade on pause
+- [x] Slow organic idle pulse animation (11s loop)
+- [x] Central play/pause orb (SVG radial gradient, aura + glow + body layers, specular highlight)
+- [x] Swipeable noise type carousel (GestureDetector pan gesture)
+- [x] Left/right ghost arrow buttons for noise navigation
+- [x] Noise name label (Fraunces italic 34px) with fade-slide transition on change
+- [x] Page dot indicators (pill/circle)
+- [x] Master volume slider
+- [x] "Scenes →" link to Scenes tab
+- [x] Timer pill (compact, opens bottom sheet)
+- [ ] Peeking adjacent orbs in carousel (full SVG orbs partially visible at screen edges)
+- [ ] Audio crossfade triggered on noise type change
 
 ### Scenes Screen
 - [ ] Horizontal preset scene cards with gradient thumbnail
@@ -94,6 +101,7 @@
 
 ## Phase 4 — Timer System ⬜ Not Started
 
+- [x] Build `useTimerStore` with Zustand (schema defined)
 - [ ] Implement Pomodoro timer (focus → break cycle)
 - [ ] Implement countdown timer (single custom duration)
 - [ ] Circular progress ring (`TimerRing`)
@@ -101,7 +109,6 @@
 - [ ] Soft chime notification at session end
 - [ ] Auto-pause noise option at break
 - [ ] Session counter display
-- [ ] Build `useTimerStore` with Zustand
 
 ---
 
@@ -120,13 +127,17 @@
 
 ## Known Issues
 
-_None yet — project not started._
+- Audio files not yet sourced — `react-native-track-player` setup pending
+- Adjacent orb peek in carousel is simplified (color dots) — full SVG orb peek not yet implemented
+- Fraunces italic is synthesized (no italic font file loaded) — may want to add `Fraunces-Italic.ttf`
 
 ---
 
 ## Notes
 
-- Audio files must loop seamlessly — test for click/pop at loop point
-- Brown noise gradient uses warm amber tones to match the "cozy, deep" feel
-- Fraunces should only be used for display text — headings, noise labels, timer digits
-- Source Sans 3 for all UI controls, labels, captions
+- **SDK:** Expo SDK 54, React Native 0.76.9, React 18.3.2
+- Babel preset: `babel-preset-expo` + `react-native-reanimated/plugin`
+- Reanimated v3 (downgraded from v4 — all APIs compatible, no code changes needed)
+- If New Architecture causes issues with track-player, add `RCTNewArchEnabled = false` to Info.plist
+- Brown noise uses vivid earthy palette: burnt orange, amber, rust, terracotta — NOT muddy browns
+- Fraunces used for wordmark (26px SemiBold), noise label (34px italic), timer digits only

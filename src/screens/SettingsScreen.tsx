@@ -16,54 +16,16 @@ import { colors } from '../constants/colors';
 import { fonts } from '../constants/fonts';
 import { spacing, radius } from '../constants/layout';
 
-const DurationPicker: React.FC<{
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (v: number) => void;
-}> = ({ label, value, min, max, step = 5, onChange }) => {
-  const haptics = useHaptics();
-  return (
-    <View style={styles.settingRow}>
-      <Text style={styles.settingLabel}>{label}</Text>
-      <View style={styles.pickerRow}>
-        <TouchableOpacity
-          onPress={() => {
-            haptics.chipTap();
-            onChange(Math.max(min, value - step));
-          }}
-          style={styles.pickerButton}
-        >
-          <Minus size={16} color={colors.textSecondary} weight="thin" />
-        </TouchableOpacity>
-        <Text style={styles.pickerValue}>{value} min</Text>
-        <TouchableOpacity
-          onPress={() => {
-            haptics.chipTap();
-            onChange(Math.min(max, value + step));
-          }}
-          style={styles.pickerButton}
-        >
-          <Plus size={16} color={colors.textSecondary} weight="thin" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
-
 export const SettingsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
   const {
-    focusDuration,
-    breakDuration,
+    duration,
+    playIndefinitely,
     endChime,
-    autoPauseOnBreak,
-    setFocusDuration,
-    setBreakDuration,
+    setDuration,
+    setPlayIndefinitely,
     setEndChime,
-    setAutoPauseOnBreak,
   } = useTimerStore();
 
   return (
@@ -73,48 +35,74 @@ export const SettingsScreen: React.FC = () => {
     >
       <Text style={styles.title}>Settings</Text>
 
-      {/* Pomodoro section */}
-      <Text style={styles.sectionHeader}>Pomodoro</Text>
+      {/* Timer section */}
+      <Text style={styles.sectionHeader}>Timer</Text>
       <View style={styles.section}>
-        <DurationPicker
-          label="Focus duration"
-          value={focusDuration}
-          min={5}
-          max={90}
-          onChange={setFocusDuration}
-        />
-        <View style={styles.separator} />
-        <DurationPicker
-          label="Break duration"
-          value={breakDuration}
-          min={1}
-          max={30}
-          step={1}
-          onChange={setBreakDuration}
-        />
-        <View style={styles.separator} />
+        {/* Play indefinitely toggle */}
         <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>End chime</Text>
+          <Text style={styles.settingLabel}>Play indefinitely</Text>
           <Switch
-            value={endChime}
-            onValueChange={setEndChime}
-            trackColor={{
-              false: colors.surfaceHigh,
-              true: colors.accentDefault,
+            value={playIndefinitely}
+            onValueChange={(v) => {
+              haptics.chipTap();
+              setPlayIndefinitely(v);
             }}
+            trackColor={{ false: colors.surfaceHigh, true: colors.accentDefault }}
             thumbColor={colors.textPrimary}
           />
         </View>
+
         <View style={styles.separator} />
-        <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>Auto-pause on break</Text>
+
+        {/* Duration picker — greyed out when playing indefinitely */}
+        <View style={[styles.settingRow, playIndefinitely && styles.rowDisabled]}>
+          <Text style={[styles.settingLabel, playIndefinitely && styles.labelDisabled]}>
+            Duration
+          </Text>
+          <View style={styles.pickerRow}>
+            <TouchableOpacity
+              onPress={() => {
+                if (playIndefinitely) return;
+                haptics.chipTap();
+                setDuration(Math.max(5, duration - 5));
+              }}
+              style={[styles.pickerButton, playIndefinitely && styles.buttonDisabled]}
+              disabled={playIndefinitely}
+            >
+              <Minus size={16} color={playIndefinitely ? colors.textTertiary : colors.textSecondary} weight="thin" />
+            </TouchableOpacity>
+            <Text style={[styles.pickerValue, playIndefinitely && styles.labelDisabled]}>
+              {duration} min
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (playIndefinitely) return;
+                haptics.chipTap();
+                setDuration(Math.min(180, duration + 5));
+              }}
+              style={[styles.pickerButton, playIndefinitely && styles.buttonDisabled]}
+              disabled={playIndefinitely}
+            >
+              <Plus size={16} color={playIndefinitely ? colors.textTertiary : colors.textSecondary} weight="thin" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.separator} />
+
+        {/* End chime */}
+        <View style={[styles.settingRow, playIndefinitely && styles.rowDisabled]}>
+          <Text style={[styles.settingLabel, playIndefinitely && styles.labelDisabled]}>
+            End chime
+          </Text>
           <Switch
-            value={autoPauseOnBreak}
-            onValueChange={setAutoPauseOnBreak}
-            trackColor={{
-              false: colors.surfaceHigh,
-              true: colors.accentDefault,
+            value={endChime}
+            onValueChange={(v) => {
+              if (playIndefinitely) return;
+              setEndChime(v);
             }}
+            disabled={playIndefinitely}
+            trackColor={{ false: colors.surfaceHigh, true: colors.accentDefault }}
             thumbColor={colors.textPrimary}
           />
         </View>
@@ -131,9 +119,7 @@ export const SettingsScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.settingRow}
           onPress={() => {
-            Linking.openURL(
-              'https://apps.apple.com/app/zone/id0000000000'
-            ).catch(() => {});
+            Linking.openURL('https://apps.apple.com/app/zone/id0000000000').catch(() => {});
           }}
         >
           <Text style={styles.settingLabel}>Rate Zone</Text>
@@ -155,7 +141,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['3xl'],
   },
   title: {
-    fontFamily: fonts.fraunces.regular,
+    fontFamily: fonts.fraunces.semiBold,
     fontSize: 36,
     color: colors.textPrimary,
     marginBottom: spacing.xl,
@@ -180,10 +166,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
   },
+  rowDisabled: {
+    opacity: 0.38,
+  },
   settingLabel: {
     fontFamily: fonts.sourceSans.regular,
     fontSize: 17,
     color: colors.textPrimary,
+  },
+  labelDisabled: {
+    color: colors.textTertiary,
   },
   settingValue: {
     fontFamily: fonts.sourceSans.regular,
@@ -207,6 +199,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceHigh,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: colors.surface,
   },
   pickerValue: {
     fontFamily: fonts.sourceSans.medium,

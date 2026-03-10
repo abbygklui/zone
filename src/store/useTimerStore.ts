@@ -1,47 +1,37 @@
 import { create } from 'zustand';
 
-export type TimerMode = 'pomodoro' | 'countdown' | 'off';
-export type TimerPhase = 'focus' | 'break';
+export type TimerMode = 'countdown' | 'off';
 
 interface TimerState {
   mode: TimerMode;
-  focusDuration: number;
-  breakDuration: number;
-  phase: TimerPhase;
-  remaining: number;
+  duration: number; // minutes
+  remaining: number; // seconds
   isRunning: boolean;
-  sessionsCompleted: number;
+  playIndefinitely: boolean;
   endChime: boolean;
-  autoPauseOnBreak: boolean;
   startTimer: () => void;
   pauseTimer: () => void;
   resetTimer: () => void;
   tickTimer: () => void;
   setMode: (m: TimerMode) => void;
-  setFocusDuration: (min: number) => void;
-  setBreakDuration: (min: number) => void;
+  setDuration: (min: number) => void;
+  setPlayIndefinitely: (v: boolean) => void;
   setEndChime: (v: boolean) => void;
-  setAutoPauseOnBreak: (v: boolean) => void;
 }
 
 export const useTimerStore = create<TimerState>((set, get) => ({
   mode: 'off',
-  focusDuration: 25,
-  breakDuration: 5,
-  phase: 'focus',
+  duration: 25,
   remaining: 25 * 60,
   isRunning: false,
-  sessionsCompleted: 0,
+  playIndefinitely: false,
   endChime: true,
-  autoPauseOnBreak: false,
 
   startTimer: () => {
     const state = get();
-    if (state.mode === 'off') return;
+    if (state.playIndefinitely || state.mode === 'off') return;
     if (state.remaining <= 0) {
-      const duration =
-        state.phase === 'focus' ? state.focusDuration : state.breakDuration;
-      set({ remaining: duration * 60, isRunning: true });
+      set({ remaining: state.duration * 60, isRunning: true });
     } else {
       set({ isRunning: true });
     }
@@ -51,35 +41,15 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
   resetTimer: () => {
     const state = get();
-    const duration =
-      state.phase === 'focus' ? state.focusDuration : state.breakDuration;
-    set({ remaining: duration * 60, isRunning: false });
+    set({ remaining: state.duration * 60, isRunning: false });
   },
 
   tickTimer: () => {
     const state = get();
     if (!state.isRunning || state.remaining <= 0) return;
-
     const newRemaining = state.remaining - 1;
     if (newRemaining <= 0) {
-      if (state.mode === 'pomodoro') {
-        const nextPhase: TimerPhase =
-          state.phase === 'focus' ? 'break' : 'focus';
-        const nextDuration =
-          nextPhase === 'focus' ? state.focusDuration : state.breakDuration;
-        const newSessions =
-          state.phase === 'focus'
-            ? state.sessionsCompleted + 1
-            : state.sessionsCompleted;
-        set({
-          phase: nextPhase,
-          remaining: nextDuration * 60,
-          isRunning: !state.autoPauseOnBreak || nextPhase === 'focus',
-          sessionsCompleted: newSessions,
-        });
-      } else {
-        set({ remaining: 0, isRunning: false });
-      }
+      set({ remaining: 0, isRunning: false });
     } else {
       set({ remaining: newRemaining });
     }
@@ -87,26 +57,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
   setMode: (m) => {
     const state = get();
-    const duration = state.focusDuration;
-    set({ mode: m, remaining: duration * 60, isRunning: false, phase: 'focus' });
+    set({ mode: m, remaining: state.duration * 60, isRunning: false });
   },
 
-  setFocusDuration: (min) => {
-    const state = get();
-    set({
-      focusDuration: min,
-      remaining: state.phase === 'focus' ? min * 60 : state.remaining,
-    });
+  setDuration: (min) => {
+    set({ duration: min, remaining: min * 60 });
   },
 
-  setBreakDuration: (min) => {
-    const state = get();
-    set({
-      breakDuration: min,
-      remaining: state.phase === 'break' ? min * 60 : state.remaining,
-    });
-  },
-
+  setPlayIndefinitely: (v) => set({ playIndefinitely: v }),
   setEndChime: (v) => set({ endChime: v }),
-  setAutoPauseOnBreak: (v) => set({ autoPauseOnBreak: v }),
 }));
