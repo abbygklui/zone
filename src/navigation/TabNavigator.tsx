@@ -1,15 +1,12 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
   House,
   Waveform,
-  SlidersHorizontal,
   GearSix,
 } from 'phosphor-react-native';
 import { HomeScreen } from '../screens/HomeScreen';
-import { ScenesScreen } from '../screens/ScenesScreen';
-import { CustomizeScreen } from '../screens/CustomizeScreen';
+import { CustomScreen } from '../screens/CustomScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { useAudioStore } from '../store/useAudioStore';
 import { colors, getNoiseColors } from '../constants/colors';
@@ -53,22 +50,12 @@ export const TabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Scenes"
-        component={ScenesScreen}
+        name="Custom"
+        component={CustomScreen}
         options={{
-          tabBarLabel: 'Scenes',
+          tabBarLabel: 'Custom',
           tabBarIcon: ({ color, size }) => (
             <Waveform size={size} color={color} weight="thin" />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Customize"
-        component={CustomizeScreen}
-        options={{
-          tabBarLabel: 'Customize',
-          tabBarIcon: ({ color, size }) => (
-            <SlidersHorizontal size={size} color={color} weight="thin" />
           ),
         }}
       />
